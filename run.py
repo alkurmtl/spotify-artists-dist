@@ -60,7 +60,7 @@ class Searcher:
         path = []
         current_artist = artist_name
         while self.parent[current_artist] is not None:
-            path.append(current_artist + ', ' + self.parent[current_artist] + ': ' + self.parent_song[current_artist])
+            path.append([current_artist, self.parent[current_artist], self.parent_song[current_artist]])
             current_artist = self.parent[current_artist]
         return path
 
@@ -87,7 +87,7 @@ class Searcher:
             visited += 1
             print(current_artist_name)
             if visited >= VISITED_LIMIT:
-                return ['Path not found']
+                return ['Я просмотрел более 1000 артистов и так и не нашел пути между вашими исполнителями']
             feats = Searcher.get_all_artists_on_feats(current_artist_id)
             found = False
             for to_artist_name, to_artist_id, song_name in feats:
@@ -99,7 +99,7 @@ class Searcher:
                 elif self.color[to_artist_name] == (self.color[current_artist_name] ^ 1):
                     artist_1 = current_artist_name
                     artist_2 = to_artist_name
-                    path_1.append(current_artist_name + ', ' + to_artist_name + ': ' + song_name)
+                    path_1.append([current_artist_name, to_artist_name, song_name])
                     found = True
                     break
             if found:
@@ -107,12 +107,17 @@ class Searcher:
         path_1 = path_1 + self.__recover_path(artist_1)
         path_2 = self.__recover_path(artist_2)
         path = []
-        if path_1[-1].find(end_artist_name) != -1:
+        if path_1[-1][0] == end_artist_name or path_1[-1][1] == end_artist_name:
             path_2.reverse()
             path = path_2 + path_1
         else:
             path_1.reverse()
             path = path_1 + path_2
+        if path[0][0] != start_artist_name:
+            path[0][0], path[0][1] = path[0][1], path[0][0]
+        for i in range(1, len(path)):
+            if path[i - 1][1] != path[i][0]:
+                path[i][0], path[i][1] = path[i][1], path[i][0]
         return path
 
 
@@ -138,7 +143,9 @@ def search(update, context):
     end_artist = res['artists']['items'][0]['id']
     searcher = Searcher()
     path = searcher.bfs(start_artist, end_artist)
-    path_message = '\n'.join(path)
+    path_message = ''
+    for song in path:
+        path_message += song[0] + ', ' + song[1] + ': ' + song[2] + '\n'
     context.bot.send_message(chat_id=update.effective_chat.id, text=path_message,
                              reply_to_message_id=update.message.message_id)
 
