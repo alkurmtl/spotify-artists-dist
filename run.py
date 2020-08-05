@@ -136,11 +136,16 @@ def search(update, context):
     res = sp.search(q=artists[0], type='artist')
     if len(res['artists']['items']) == 0:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Первый исполнитель не найден')
+        return
     start_artist = res['artists']['items'][0]['id']
     res = sp.search(q=artists[1], type='artist')
     if len(res['artists']['items']) == 0:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Второй исполнитель не найден')
+        return
     end_artist = res['artists']['items'][0]['id']
+    if start_artist == end_artist:
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Исполнители совпадают')
+        return
     searcher = Searcher()
     path = searcher.bfs(start_artist, end_artist)
     path_message = ''
