@@ -3,18 +3,24 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import json
 from _collections import deque
 from telegram.ext import Updater
+from telegram.ext import CommandHandler
+from telegram.ext import MessageHandler, Filters
+import logging
 
 LIMIT = 20
 VISITED_LIMIT = 1000
 
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
 credentials_file = open('credentials.txt', 'r')
-client_id, client_secret = credentials_file.read().split()
+client_id, client_secret = credentials_file.readline().split()
 auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-#telegram_token = credentials_file.read()
-#updater = Updater(token=telegram_token, use_context=True)
-#credentials_file.close()
+telegram_token = credentials_file.readline()
+updater = Updater(token=telegram_token, use_context=True)
+credentials_file.close()
+
 
 class Searcher:
 
@@ -110,17 +116,33 @@ class Searcher:
         return path
 
 
-artist1_name = 'Aikko'
-artist2_name = 'Скриптонит'
-res = sp.search(q=artist1_name, type='artist')
-start_artist = res['artists']['items'][0]['id']
-res = sp.search(q=artist2_name, type='artist')
-end_artist = res['artists']['items'][0]['id']
-searcher = Searcher()
-path = searcher.bfs(start_artist, end_artist)
-print('\n' + sp.artist(start_artist)['name'] + ' to ' + sp.artist(end_artist)['name'])
-for s in path:
-    print(s)
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Кек')
+
+
+def search(update, context):
+    artists = update.message.text.splitlines()
+    if len(artists) != 2:
+        context.bot.send_message(chat_id=update.effective_chat.id, text='В вашем сообщении должно быть две строки')
+        return
+    res = sp.search(q=artists[0], type='artist')
+    if len(res['artists']['items']) == 0:
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Первый исполнитель не найден')
+    start_artist = res['artists']['items'][0]['id']
+    res = sp.search(q=artists[1], type='artist')
+    if len(res['artists']['items']) == 0:
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Второй исполнитель не найден')
+    end_artist = res['artists']['items'][0]['id']
+    searcher = Searcher()
+    path = searcher.bfs(start_artist, end_artist)
+    path_message = '\n'.join(path)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=path_message)
+
+
+updater.dispatcher.add_handler(CommandHandler('start', start))
+updater.dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), search))
+updater.start_polling()
+print('Started')
 
 
 
