@@ -8,6 +8,7 @@ VISITED_LIMIT = 1000
 
 color = dict()
 parent = dict()
+parent_song = dict()
 
 
 def get_all_artists_on_feats(artist_id):
@@ -32,7 +33,7 @@ def get_all_artists_on_feats(artist_id):
                     continue
                 for artist in song['artists']:
                     if artist['id'] != artist_id:
-                        res.add((artist['name'], artist['id']))
+                        res.add((artist['name'], artist['id'], song['name']))
         cur_offset_albums += LIMIT
     return res
 
@@ -40,8 +41,8 @@ def get_all_artists_on_feats(artist_id):
 def recover_path(artist_name):
     path = []
     current_artist = artist_name
-    while current_artist is not None:
-        path.append(current_artist)
+    while parent[current_artist] is not None:
+        path.append(current_artist + ', ' + parent[current_artist] + ': ' + parent_song[current_artist])
         current_artist = parent[current_artist]
     return path
 
@@ -57,7 +58,9 @@ def bfs(start_artist, end_artist):
     parent[start_artist_name] = None
     parent[end_artist_name] = None
     artist_1 = ''
+    path_1 = []
     artist_2 = ''
+    path_2 = []
     visited = 0
     while len(q) > 0:
         current_artist_name, current_artist_id = q.popleft()
@@ -65,26 +68,26 @@ def bfs(start_artist, end_artist):
         print(current_artist_name)
         if visited >= VISITED_LIMIT:
             return ['Path not found']
-        if current_artist_name == 'Automatikk':
-            kek = '2JrBKNalGY7zqWDVx3BIFc'
         feats = get_all_artists_on_feats(current_artist_id)
         found = False
-        for to_artist_name, to_artist_id in feats:
+        for to_artist_name, to_artist_id, song_name in feats:
             if to_artist_name not in parent:
                 q.append((to_artist_name, to_artist_id))
                 color[to_artist_name] = color[current_artist_name]
                 parent[to_artist_name] = current_artist_name
+                parent_song[to_artist_name] = song_name
             elif color[to_artist_name] == (color[current_artist_name] ^ 1):
                 artist_1 = current_artist_name
                 artist_2 = to_artist_name
+                path_1.append(current_artist_name + ', ' + to_artist_name + ': ' + song_name)
                 found = True
                 break
         if found:
             break
-    path_1 = recover_path(artist_1)
+    path_1 = path_1 + recover_path(artist_1)
     path_2 = recover_path(artist_2)
     path = []
-    if path_1[-1] == end_artist_name:
+    if path_1[-1].find(end_artist_name) != -1:
         path_2.reverse()
         path = path_2 + path_1
     else:
@@ -99,8 +102,12 @@ credentials_file.close()
 auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-path = bfs('2O7iILP4xoejqge6ntRhgR', '1F8usyx5PbYGWxf0bwdXwA')
-print(path)
+start_artist = '1yFFTjDOMJQXG4dmhk9TcC'
+end_artist = '1hKtAocjfjS9OpOmI4hmSo'
+path = bfs(start_artist, end_artist)
+print('\n' + sp.artist(start_artist)['name'] + ' to ' + sp.artist(end_artist)['name'])
+for s in path:
+    print(s)
 #res = get_all_artists_on_feats('5rXtHvb8jMNgmSX7Khd77x')
 #print(res)
 #res = sp.albums(['1Tmh5qT7B3jFfypXFaCqgt', '7491SDsfObnnywNTtuaXAW'])
