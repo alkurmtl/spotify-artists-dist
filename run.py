@@ -12,9 +12,9 @@ client_id, client_secret = credentials_file.read().split()
 auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-telegram_token = credentials_file.read()
-updater = Updater(token=telegram_token, use_context=True)
-credentials_file.close()
+#telegram_token = credentials_file.read()
+#updater = Updater(token=telegram_token, use_context=True)
+#credentials_file.close()
 
 class Searcher:
 
