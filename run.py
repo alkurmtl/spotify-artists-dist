@@ -102,14 +102,16 @@ credentials_file.close()
 auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-start_artist = '1yFFTjDOMJQXG4dmhk9TcC'
-end_artist = '1hKtAocjfjS9OpOmI4hmSo'
+artist1_name = 'Aikko'
+artist2_name = 'Скриптонит'
+res = sp.search(q=artist1_name, type='artist')
+start_artist = res['artists']['items'][0]['id']
+res = sp.search(q=artist2_name, type='artist')
+end_artist = res['artists']['items'][0]['id']
 path = bfs(start_artist, end_artist)
 print('\n' + sp.artist(start_artist)['name'] + ' to ' + sp.artist(end_artist)['name'])
 for s in path:
     print(s)
-#res = get_all_artists_on_feats('5rXtHvb8jMNgmSX7Khd77x')
 #print(res)
-#res = sp.albums(['1Tmh5qT7B3jFfypXFaCqgt', '7491SDsfObnnywNTtuaXAW'])
 #with open('/mnt/c/Users/Alexander.LAPTOP-L2LI4V4F/Desktop/res.json', 'w') as outfile:
 #    json.dump(res, outfile)
