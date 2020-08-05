@@ -117,7 +117,10 @@ class Searcher:
 
 
 def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Кек')
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Напишите двух исполнителей '
+                                                                    'отдельным сообщением в формате:'
+                                                                    '\nПервый исполнитель'
+                                                                    '\nВторой исполнитель')
 
 
 def search(update, context):
@@ -136,7 +139,8 @@ def search(update, context):
     searcher = Searcher()
     path = searcher.bfs(start_artist, end_artist)
     path_message = '\n'.join(path)
-    context.bot.send_message(chat_id=update.effective_chat.id, text=path_message)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=path_message,
+                             reply_to_message_id=update.message.message_id)
 
 
 updater.dispatcher.add_handler(CommandHandler('start', start))
