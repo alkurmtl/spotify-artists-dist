@@ -13,11 +13,11 @@ VISITED_LIMIT = 1000
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 credentials_file = open('credentials.txt', 'r')
-client_id, client_secret = credentials_file.readline().split()
+spotify_credentials, telegram_token = credentials_file.read().splitlines()
+client_id, client_secret = spotify_credentials.split()
 auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-telegram_token = credentials_file.readline()
 updater = Updater(token=telegram_token, use_context=True)
 credentials_file.close()
 
