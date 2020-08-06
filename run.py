@@ -8,7 +8,7 @@ from telegram.ext import MessageHandler, Filters
 import logging
 
 LIMIT = 20
-VISITED_LIMIT = 1000
+VISITED_LIMIT = 200
 
 logging.basicConfig(filename='log.txt', filemode='w',
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -91,7 +91,12 @@ class Searcher:
             logging.info('processing ' + current_artist_name + ' in search for ' +
                          telegram_user_to_str(update.effective_user))
             if visited >= VISITED_LIMIT:
+                logging.info('Finished search for ' +
+                             telegram_user_to_str(update.effective_user) + ': not found')
                 return [['Not found', 'Not found', 'Not found']]
+            if visited % 10 == 0:
+                context.bot.send_message(chat_id=update.effective_chat.id, text='Обработали ' +
+                                                                             str(visited) + ' исполнителей')
             feats = Searcher.get_all_artists_on_feats(current_artist_id)
             found = False
             for to_artist_name, to_artist_id, song_name in feats:
@@ -104,6 +109,8 @@ class Searcher:
                     artist_1 = current_artist_name
                     artist_2 = to_artist_name
                     path_1.append([current_artist_name, to_artist_name, song_name])
+                    logging.info('Finished search for ' +
+                                 telegram_user_to_str(update.effective_user) + ': found')
                     found = True
                     break
             if found:
