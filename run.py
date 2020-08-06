@@ -10,7 +10,8 @@ import logging
 LIMIT = 20
 VISITED_LIMIT = 1000
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(filename='log.txt', filemode='w',
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 credentials_file = open('credentials.txt', 'r')
 spotify_credentials, telegram_token = credentials_file.read().splitlines()
@@ -64,12 +65,14 @@ class Searcher:
             current_artist = self.parent[current_artist]
         return path
 
-    def bfs(self, start_artist, end_artist):
+    def bfs(self, start_artist, end_artist, update, context):
         self.color = dict()
         self.parent = dict()
         self.parent_song = dict()
         start_artist_name = sp.artist(start_artist)['name']
         end_artist_name = sp.artist(end_artist)['name']
+        logging.info('starting search for ' + telegram_user_to_str(update.effective_user) + '. Artists are ' +
+                     start_artist_name + ' ' + end_artist_name)
         q = deque()
         q.append((start_artist_name, start_artist))
         q.append((end_artist_name, end_artist))
@@ -85,9 +88,10 @@ class Searcher:
         while len(q) > 0:
             current_artist_name, current_artist_id = q.popleft()
             visited += 1
-            print(current_artist_name)
+            logging.info('processing ' + current_artist_name + ' in search for ' +
+                         telegram_user_to_str(update.effective_user))
             if visited >= VISITED_LIMIT:
-                return ['Я просмотрел более 1000 артистов и так и не нашел пути между вашими исполнителями']
+                return [['Not found', 'Not found', 'Not found']]
             feats = Searcher.get_all_artists_on_feats(current_artist_id)
             found = False
             for to_artist_name, to_artist_id, song_name in feats:
@@ -121,7 +125,17 @@ class Searcher:
         return path
 
 
+def telegram_user_to_str(user):
+    res = user.first_name
+    if user.last_name is not None:
+        res += ' ' + user.last_name
+    if user.username is not None:
+        res += ' (' + user.username + ')'
+    return res
+
+
 def start(update, context):
+    logging.info('start from ' + telegram_user_to_str(update.effective_user))
     context.bot.send_message(chat_id=update.effective_chat.id, text='Напишите двух исполнителей '
                                                                     'отдельным сообщением в формате:'
                                                                     '\nПервый исполнитель'
@@ -129,25 +143,34 @@ def start(update, context):
 
 
 def search(update, context):
+    logging.info('message from ' + telegram_user_to_str(update.effective_user) + ':\n' + update.message.text)
     artists = update.message.text.splitlines()
     if len(artists) != 2:
         context.bot.send_message(chat_id=update.effective_chat.id, text='В вашем сообщении должно быть две строки')
+        logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
+                     ' because message consists of not two lines')
         return
     res = sp.search(q=artists[0], type='artist')
     if len(res['artists']['items']) == 0:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Первый исполнитель не найден')
+        logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
+                     ' because first artist isn\'t found')
         return
     start_artist = res['artists']['items'][0]['id']
     res = sp.search(q=artists[1], type='artist')
     if len(res['artists']['items']) == 0:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Второй исполнитель не найден')
+        logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
+                     ' because second artist isn\'t found')
         return
     end_artist = res['artists']['items'][0]['id']
     if start_artist == end_artist:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Исполнители совпадают')
+        logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
+                     ' because artist are the same')
         return
     searcher = Searcher()
-    path = searcher.bfs(start_artist, end_artist)
+    path = searcher.bfs(start_artist, end_artist, update, context)
     path_message = ''
     for song in path:
         path_message += song[0] + ', ' + song[1] + ': ' + song[2] + '\n'
