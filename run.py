@@ -85,6 +85,7 @@ class Searcher:
         artist_2 = ''
         path_2 = []
         visited = 0
+        found = False
         while len(q) > 0:
             current_artist_name, current_artist_id = q.popleft()
             visited += 1
@@ -98,7 +99,6 @@ class Searcher:
                 context.bot.send_message(chat_id=update.effective_chat.id, text='Обработали ' +
                                                                              str(visited) + ' исполнителей')
             feats = Searcher.get_all_artists_on_feats(current_artist_id)
-            found = False
             for to_artist_name, to_artist_id, song_name in feats:
                 if to_artist_name not in self.parent:
                     q.append((to_artist_name, to_artist_id))
@@ -115,6 +115,10 @@ class Searcher:
                     break
             if found:
                 break
+        if not found:
+            logging.info('Finished search for ' +
+                         telegram_user_to_str(update.effective_user) + ': not found')
+            return [['Not found', 'Not found', 'Not found']]
         path_1 = path_1 + self.__recover_path(artist_1)
         path_2 = self.__recover_path(artist_2)
         path = []
