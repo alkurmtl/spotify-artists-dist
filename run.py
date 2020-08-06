@@ -34,6 +34,7 @@ class Searcher:
     def get_all_artists_on_feats(cls, artist_id):
         cur_offset_albums = 0
         res = set()
+        artists = set()
         while True:
             albums = sp.artist_albums(artist_id, offset=cur_offset_albums, limit=LIMIT)
             if len(albums['items']) == 0:
@@ -52,8 +53,9 @@ class Searcher:
                     if not has_needed:
                         continue
                     for artist in song['artists']:
-                        if artist['id'] != artist_id:
+                        if artist['id'] != artist_id and artist['name'] not in artists:
                             res.add((artist['name'], artist['id'], song['name']))
+                            artists.add(artist['name'])
             cur_offset_albums += LIMIT
         return res
 
