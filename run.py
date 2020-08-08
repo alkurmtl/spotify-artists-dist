@@ -8,7 +8,7 @@ from telegram.ext import MessageHandler, Filters
 import logging
 
 LIMIT = 20
-VISITED_LIMIT = 200
+REQUESTED_LIMIT = 200
 
 logging.basicConfig(filename='log.txt', filemode='w',
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -36,7 +36,7 @@ class Searcher:
     @classmethod
     def get_all_artists_on_feats(cls, artist_id):
         if artist_id in graph:
-            return graph[artist_id]
+            return graph[artist_id], 0
         cur_offset_albums = 0
         res = set()
         artists = set()
@@ -63,7 +63,7 @@ class Searcher:
                             artists.add(artist['name'])
             cur_offset_albums += LIMIT
         graph[artist_id] = res
-        return res
+        return res, 1
 
     def __recover_path(self, artist_name):
         path = []
@@ -92,25 +92,26 @@ class Searcher:
         path_1 = []
         artist_2 = ''
         path_2 = []
-        visited = 0
+        requested = 0
         found = False
         context.bot.send_message(chat_id=update.effective_chat.id, text='Запускаем поиск')
         progress_message = context.bot.send_message(chat_id=update.effective_chat.id,
-                                                    text='Обработали 0 исполнителей')
+                                                    text='Обработали 0 новых исполнителей')
         while len(q) > 0:
             current_artist_name, current_artist_id = q.popleft()
-            visited += 1
+            feats, not_in_cache = Searcher.get_all_artists_on_feats(current_artist_id)
+            prev_requested = requested
+            requested += not_in_cache
             logging.info('processing ' + current_artist_name + ' in search for ' +
                          telegram_user_to_str(update.effective_user))
-            if visited >= VISITED_LIMIT:
+            if requested >= REQUESTED_LIMIT:
                 logging.info('Finished search for ' +
                              telegram_user_to_str(update.effective_user) + ': not found')
                 return [['Not found', 'Not found', 'Not found']]
-            if visited % 10 == 0:
+            if requested % 10 == 0 and requested != prev_requested:
                 context.bot.edit_message_text(chat_id=update.effective_chat.id,
                                               message_id=progress_message.message_id,
-                                              text='Обработали ' + str(visited) + ' исполнителей')
-            feats = Searcher.get_all_artists_on_feats(current_artist_id)
+                                              text='Обработали ' + str(requested) + ' новых исполнителей')
             for to_artist_name, to_artist_id, song_name in feats:
                 if to_artist_name not in self.parent:
                     q.append((to_artist_name, to_artist_id))
@@ -159,10 +160,23 @@ def telegram_user_to_str(user):
 
 def start(update, context):
     logging.info('start from ' + telegram_user_to_str(update.effective_user))
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Напишите двух исполнителей '
-                                                                    'отдельным сообщением в формате:'
-                                                                    '\nПервый исполнитель'
-                                                                    '\nВторой исполнитель')
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text='Привет! Скажем, А фитовал с В, а B c С. Тогда расстояние между исполнителями '
+                                  'А и С равно двум.\nЭтот бот ищет кратчайшее расстояние между исполнителями '
+                                  'по библиотеке Spotify. К сожалению, она довольно помойная, и там под одним '
+                                  'исполнителем часто может скрываться несколько, а еще там много всяких ремиксов, '
+                                  'но как есть. Возможно, в будущем я поработаю над этой проблемой.\nПоиск устроен '
+                                  'следующим образом. Отправляете боту сообщение вида:\nИсполнитель 1\nИсполнитель 2\n'
+                                  'Бот находит в спотифае исполнителей, которые лучше всего, по мнению спотифая, '
+                                  'соответствуют введеным вами, и начинает искать. Если вдруг бот принял вашего '
+                                  'исполнителя за другого, то можно вместо имени использовать ссылку на исполнителя '
+                                  'на спотифае. Например, https://open.spotify.com/artist/6Vh6UDWfu9PUSXSzAaB3CW.\n'
+                                  'Во время поиска показывается сколько новых (некоторые хранятся в памяти бота и не '
+                                  'считаются новыми) '
+                                  'исполнителей обработал бот, пока искал. Если это число достигнет 200, поиск '
+                                  'прекратится. После этого можно запустить поиск заново, и бот сможет обработать '
+                                  'еще 200 новых исполнителей, но если он не нашел путь в предыдущий раз, пути '
+                                  'либо не существует в принципе, либо вряд ли его можно найти за разумное время.')
 
 
 def get_artist_id(query):
