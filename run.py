@@ -79,8 +79,10 @@ class Searcher:
         self.parent_song = dict()
         start_artist_name = sp.artist(start_artist)['name']
         end_artist_name = sp.artist(end_artist)['name']
-        logging.info('starting search for ' + telegram_user_to_str(update.effective_user) + '. Artists are ' +
-                     start_artist_name + ' ' + end_artist_name)
+        artists_message = start_artist_name + ' https://open.spotify.com/artist/' + sp.artist(start_artist)['id']
+        artists_message += '\n' + end_artist_name + ' https://open.spotify.com/artist/' + sp.artist(end_artist)['id']
+        logging.info('starting search for ' + telegram_user_to_str(update.effective_user) + '. Artists are:\n'
+                     + artists_message)
         q = deque()
         q.append((start_artist_name, start_artist))
         q.append((end_artist_name, end_artist))
@@ -94,7 +96,8 @@ class Searcher:
         path_2 = []
         requested = 0
         found = False
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Запускаем поиск')
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Запускаем поиск. Исполнители:\n'
+                                                                        + artists_message)
         progress_message = context.bot.send_message(chat_id=update.effective_chat.id,
                                                     text='Обработали 0 новых исполнителей')
         while len(q) > 0:
@@ -219,6 +222,7 @@ def search(update, context):
     path_message = ''
     for song in path:
         path_message += song[0] + ', ' + song[1] + ': ' + song[2] + '\n'
+    logging.info('\n' + path_message)
     context.bot.send_message(chat_id=update.effective_chat.id, text=path_message,
                              reply_to_message_id=update.message.message_id)
 
