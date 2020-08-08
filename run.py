@@ -23,6 +23,9 @@ updater = Updater(token=telegram_token, use_context=True)
 credentials_file.close()
 
 
+graph = dict()
+
+
 class Searcher:
 
     def __init__(self):
@@ -32,6 +35,8 @@ class Searcher:
 
     @classmethod
     def get_all_artists_on_feats(cls, artist_id):
+        if artist_id in graph:
+            return graph[artist_id]
         cur_offset_albums = 0
         res = set()
         artists = set()
@@ -57,6 +62,7 @@ class Searcher:
                             res.add((artist['name'], artist['id'], song['name']))
                             artists.add(artist['name'])
             cur_offset_albums += LIMIT
+        graph[artist_id] = res
         return res
 
     def __recover_path(self, artist_name):
