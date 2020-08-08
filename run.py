@@ -6,7 +6,6 @@ from telegram.ext import Updater
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 import logging
-from urllib.parse import urlparse
 
 LIMIT = 20
 VISITED_LIMIT = 200
@@ -100,7 +99,7 @@ class Searcher:
                 return [['Not found', 'Not found', 'Not found']]
             if visited % 10 == 0:
                 context.bot.send_message(chat_id=update.effective_chat.id, text='Обработали ' +
-                                                                             str(visited) + ' исполнителей')
+                                                                            str(visited) + ' исполнителей')
             feats = Searcher.get_all_artists_on_feats(current_artist_id)
             for to_artist_name, to_artist_id, song_name in feats:
                 if to_artist_name not in self.parent:
@@ -156,7 +155,7 @@ def start(update, context):
                                                                     '\nВторой исполнитель')
 
 
-def get_artist_id(query, update, context):
+def get_artist_id(query):
     try:
         res = sp.artist(query)
         artist = res['id']
@@ -176,12 +175,12 @@ def search(update, context):
         logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
                      ' because message consists of not two lines')
         return
-    start_artist = get_artist_id(artists[0], update, context)
+    start_artist = get_artist_id(artists[0])
     if start_artist is None:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Первый исполнитель не найден')
         logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
                      ' because first artist isn\'t found')
-    end_artist = get_artist_id(artists[1], update, context)
+    end_artist = get_artist_id(artists[1])
     if end_artist is None:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Второй исполнитель не найден')
         logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
