@@ -6,6 +6,7 @@ from telegram.ext import Updater
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 import logging
+from urllib.parse import urlparse
 
 LIMIT = 20
 VISITED_LIMIT = 200
@@ -155,6 +156,18 @@ def start(update, context):
                                                                     '\nВторой исполнитель')
 
 
+def get_artist_id(query, update, context):
+    try:
+        res = sp.artist(query)
+        artist = res['id']
+    except Exception:
+        res = sp.search(q=query, type='artist')
+        if len(res['artists']['items']) == 0:
+            return None
+        artist = res['artists']['items'][0]['id']
+    return artist
+
+
 def search(update, context):
     logging.info('message from ' + telegram_user_to_str(update.effective_user) + ':\n' + update.message.text)
     artists = update.message.text.splitlines()
@@ -163,20 +176,16 @@ def search(update, context):
         logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
                      ' because message consists of not two lines')
         return
-    res = sp.search(q=artists[0], type='artist')
-    if len(res['artists']['items']) == 0:
+    start_artist = get_artist_id(artists[0], update, context)
+    if start_artist is None:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Первый исполнитель не найден')
         logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
                      ' because first artist isn\'t found')
-        return
-    start_artist = res['artists']['items'][0]['id']
-    res = sp.search(q=artists[1], type='artist')
-    if len(res['artists']['items']) == 0:
+    end_artist = get_artist_id(artists[1], update, context)
+    if end_artist is None:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Второй исполнитель не найден')
         logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
-                     ' because second artist isn\'t found')
-        return
-    end_artist = res['artists']['items'][0]['id']
+                     ' because first artist isn\'t found')
     if start_artist == end_artist:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Исполнители совпадают')
         logging.info('rejected search query from ' + telegram_user_to_str(update.effective_user) +
@@ -202,6 +211,6 @@ print('Started')
 
 
 
-#print(res)
+#res = sp.artist('https://spotipy.readthedocs.io/en/2.13.0/')
 #with open('/mnt/c/Users/Alexander.LAPTOP-L2LI4V4F/Desktop/res.json', 'w') as outfile:
 #    json.dump(res, outfile)
